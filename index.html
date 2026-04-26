@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Ta Realtor — Let's Build Something Beautiful</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #c9a24a;
+      --gold-dark: #a07d2e;
+      --gold-light: #e8d48c;
+      --bg: #080808;
+      --surface: #111111;
+      --surface-2: #1a1a1a;
+      --border: #252525;
+      --text: #e8e0d0;
+      --text-muted: #7a6e5a;
+      --text-dim: #3a3028;
+      --radius: 3px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Progress */
+    .progress-bar-wrap {
+      position: fixed; top: 0; left: 0; right: 0;
+      height: 2px; background: #1a1a1a; z-index: 1000;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold), var(--gold-light));
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+      width: 0%;
+    }
+    .progress-label {
+      position: fixed; top: 12px; right: 20px;
+      font-size: 10px; font-weight: 400; color: var(--text-muted);
+      letter-spacing: 0.15em; text-transform: uppercase;
+      z-index: 1001; display: none;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--surface-2); border: 1px solid var(--gold-dark);
+      color: var(--gold); padding: 10px 18px; border-radius: var(--radius);
+      font-size: 12px; font-weight: 400; letter-spacing: 0.08em;
+      opacity: 0; transform: translateY(8px);
+      transition: all 0.3s ease; z-index: 2000; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Sections */
+    .section {
+      display: none; min-height: 100vh;
+      padding: 88px 24px 72px; max-width: 660px; margin: 0 auto;
+      animation: fadeUp 0.55s ease forwards;
+    }
+    .section.active { display: block; }
+
+    #section-0, #section-success {
+      display: none; flex-direction: column;
+      justify-content: center; align-items: flex-start;
+      min-height: 100vh;
+    }
+    #section-0.active, #section-success.active { display: flex; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Intro */
+    .intro-eyebrow {
+      font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 36px;
+    }
+    .intro-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(52px, 10vw, 90px);
+      font-weight: 300; line-height: 1.0; color: var(--text);
+    }
+    .intro-title em { font-style: italic; color: var(--gold); }
+    .intro-rule { width: 44px; height: 1px; background: var(--gold); margin: 32px 0; }
+    .intro-sub {
+      font-size: 15px; font-weight: 300; color: var(--text-muted);
+      line-height: 1.75; max-width: 460px; margin-bottom: 52px;
+    }
+    .intro-sub strong { color: var(--text); font-weight: 400; }
+
+    /* Section header */
+    .section-eyebrow {
+      font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 18px;
+    }
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(30px, 6vw, 46px);
+      font-weight: 400; line-height: 1.15; color: var(--text); margin-bottom: 10px;
+    }
+    .section-desc {
+      font-size: 14px; color: var(--text-muted);
+      line-height: 1.75; margin-bottom: 52px;
+    }
+
+    /* Questions */
+    .question { margin-bottom: 44px; }
+    .question-label {
+      font-size: 16px; font-weight: 400; color: var(--text);
+      line-height: 1.5; margin-bottom: 18px; display: block;
+    }
+    .question-label .opt {
+      font-size: 12px; color: var(--text-muted); font-style: italic;
+    }
+
+    /* Choices */
+    .choices { display: flex; flex-wrap: wrap; gap: 10px; }
+    .choice-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-muted); padding: 12px 20px; border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 300;
+      cursor: pointer; transition: all 0.2s ease; text-align: left; line-height: 1.4;
+    }
+    .choice-btn:hover { border-color: var(--gold-dark); color: var(--text); }
+    .choice-btn.selected {
+      background: rgba(201,162,74,0.07);
+      border-color: var(--gold); color: var(--gold);
+    }
+
+    /* Inputs */
+    input[type="text"], textarea {
+      width: 100%; background: var(--surface);
+      border: 1px solid var(--border); color: var(--text);
+      padding: 14px 18px; border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 300;
+      resize: vertical; transition: border-color 0.2s ease; -webkit-appearance: none;
+    }
+    input[type="text"]:focus, textarea:focus {
+      outline: none; border-color: var(--gold-dark);
+    }
+    input[type="text"]::placeholder, textarea::placeholder { color: #2e2820; }
+    textarea { min-height: 96px; }
+
+    /* Buttons */
+    .nav-btns { display: flex; gap: 12px; margin-top: 52px; align-items: center; }
+    .btn-primary {
+      background: var(--gold); color: #050505; border: none;
+      padding: 16px 40px; border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+      letter-spacing: 0.07em; cursor: pointer; transition: all 0.2s ease;
+    }
+    .btn-primary:hover { background: var(--gold-light); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-back {
+      background: none; border: 1px solid var(--border); color: var(--text-muted);
+      padding: 16px 28px; border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 300;
+      cursor: pointer; transition: all 0.2s ease;
+    }
+    .btn-back:hover { border-color: var(--text-muted); color: var(--text); }
+
+    .submit-error {
+      color: #c05050; font-size: 13px; margin-top: 14px; display: none;
+    }
+
+    /* Success */
+    .success-check {
+      width: 52px; height: 52px; border: 1px solid var(--gold);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      color: var(--gold); font-size: 20px; margin-bottom: 36px;
+    }
+    .success-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(36px, 7vw, 58px); font-weight: 300;
+      color: var(--text); line-height: 1.1; margin-bottom: 10px;
+    }
+    .success-sub {
+      font-size: 15px; color: var(--text-muted); line-height: 1.75; max-width: 420px;
+    }
+
+    @media (max-width: 480px) {
+      .section { padding: 80px 20px 56px; }
+      .choices { gap: 8px; }
+      .choice-btn { font-size: 13px; padding: 11px 15px; }
+      .nav-btns { flex-direction: column-reverse; align-items: stretch; }
+      .btn-primary, .btn-back { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" id="progressFill"></div>
+</div>
+<div class="progress-label" id="progressLabel"></div>
+<div class="toast" id="toast">✓ Progress saved</div>
+
+<form id="mainForm">
+  <input type="hidden" name="client_name" value="My Ta Realtor" />
+
+  <!-- INTRO -->
+  <div class="section active" id="section-0">
+    <div class="intro-eyebrow">Discovery — My Ta Realtor</div>
+    <h1 class="intro-title">Let's build<br>something <em>beautiful.</em></h1>
+    <div class="intro-rule"></div>
+    <p class="intro-sub">
+      Hey My Ta — I put this together so I understand your vision before I start building.<br><br>
+      <strong>10–15 minutes.</strong> Go at your own pace — your answers save automatically.
+    </p>
+    <button type="button" class="btn-primary" onclick="goTo(1)">Let's get started</button>
+  </div>
+
+  <!-- SECTION 1: About You -->
+  <div class="section" id="section-1">
+    <div class="section-eyebrow">Section 1 of 6</div>
+    <h2 class="section-title">About You &amp; Your Business</h2>
+    <p class="section-desc">Let's start with the basics — who you are and what you're building.</p>
+
+    <div class="question">
+      <label class="question-label">What's your full name and the name you go by professionally? <span class="opt">(just confirming)</span></label>
+      <input type="text" name="q_full_name" placeholder="e.g. My Ta — @mytarealtor" />
+    </div>
+
+    <div class="question">
+      <label class="question-label">How long have you been a real estate agent?</label>
+      <div class="choices" data-type="single" data-name="q_experience">
+        <button type="button" class="choice-btn">Less than 1 year</button>
+        <button type="button" class="choice-btn">1–3 years</button>
+        <button type="button" class="choice-btn">3–5 years</button>
+        <button type="button" class="choice-btn">5–10 years</button>
+        <button type="button" class="choice-btn">10+ years</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Are you independent or part of a team?</label>
+      <div class="choices" data-type="single" data-name="q_team_status">
+        <button type="button" class="choice-btn">Independent agent</button>
+        <button type="button" class="choice-btn">Part of a team</button>
+        <button type="button" class="choice-btn">I lead my own team</button>
+        <button type="button" class="choice-btn">Part of a brokerage</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">In your own words — what makes you different from other agents?</label>
+      <textarea name="q_differentiator" placeholder="Don't overthink it — even one thing you do differently counts."></textarea>
+    </div>
+
+    <div class="question">
+      <label class="question-label">How did you hear about Cal?</label>
+      <div class="choices" data-type="multi" data-name="q_referral_source">
+        <button type="button" class="choice-btn">Referral (family / friend)</button>
+        <button type="button" class="choice-btn">TikTok</button>
+        <button type="button" class="choice-btn">Instagram</button>
+        <button type="button" class="choice-btn">Facebook</button>
+        <button type="button" class="choice-btn">Google</button>
+        <button type="button" class="choice-btn">Cold outreach</button>
+        <button type="button" class="choice-btn">Other</button>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button type="button" class="btn-primary" onclick="goTo(2)">Next</button>
+      <button type="button" class="btn-back" onclick="goTo(0)">Back</button>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Market & Clients -->
+  <div class="section" id="section-2">
+    <div class="section-eyebrow">Section 2 of 6</div>
+    <h2 class="section-title">Your Market &amp; Clients</h2>
+    <p class="section-desc">Who you work with and where — this shapes everything.</p>
+
+    <div class="question">
+      <label class="question-label">What cities or areas do you primarily serve?</label>
+      <input type="text" name="q_service_area" placeholder="e.g. San Gabriel Valley, Pasadena, LA, Orange County…" />
+    </div>
+
+    <div class="question">
+      <label class="question-label">Do you focus on buyers, sellers, or both?</label>
+      <div class="choices" data-type="single" data-name="q_buy_sell">
+        <button type="button" class="choice-btn">Mostly buyers</button>
+        <button type="button" class="choice-btn">Mostly sellers</button>
+        <button type="button" class="choice-btn">Both equally</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What type of properties do you specialize in?</label>
+      <div class="choices" data-type="multi" data-name="q_property_types">
+        <button type="button" class="choice-btn">Residential homes</button>
+        <button type="button" class="choice-btn">Condos &amp; townhomes</button>
+        <button type="button" class="choice-btn">Luxury properties</button>
+        <button type="button" class="choice-btn">Investment properties</button>
+        <button type="button" class="choice-btn">First-time buyer homes</button>
+        <button type="button" class="choice-btn">Commercial</button>
+        <button type="button" class="choice-btn">New construction</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What price range do most of your deals fall in?</label>
+      <div class="choices" data-type="single" data-name="q_price_range">
+        <button type="button" class="choice-btn">Under $500K</button>
+        <button type="button" class="choice-btn">$500K – $1M</button>
+        <button type="button" class="choice-btn">$1M – $2M</button>
+        <button type="button" class="choice-btn">$2M – $5M</button>
+        <button type="button" class="choice-btn">$5M+</button>
+        <button type="button" class="choice-btn">All over the place</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Describe your ideal client in one sentence.</label>
+      <textarea name="q_ideal_client" placeholder="e.g. A Vietnamese-American family buying their first home in the San Gabriel Valley…"></textarea>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Do you actively serve Vietnamese-speaking clients?</label>
+      <div class="choices" data-type="single" data-name="q_bilingual">
+        <button type="button" class="choice-btn">Yes — it's a big part of my business</button>
+        <button type="button" class="choice-btn">Sometimes, when it comes up</button>
+        <button type="button" class="choice-btn">Not really a focus right now</button>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button type="button" class="btn-primary" onclick="goTo(3)">Next</button>
+      <button type="button" class="btn-back" onclick="goTo(1)">Back</button>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Website -->
+  <div class="section" id="section-3">
+    <div class="section-eyebrow">Section 3 of 6</div>
+    <h2 class="section-title">Your New Website</h2>
+    <p class="section-desc">The core of what we're building — your luxury personal brand site.</p>
+
+    <div class="question">
+      <label class="question-label">Do you currently have a website?</label>
+      <div class="choices" data-type="single" data-name="q_current_site">
+        <button type="button" class="choice-btn">No — starting fresh</button>
+        <button type="button" class="choice-btn">Yes, but I never send people there</button>
+        <button type="button" class="choice-btn">Yes and I actively use it</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What's the ONE thing you want visitors to do when they land on your site?</label>
+      <div class="choices" data-type="single" data-name="q_primary_cta">
+        <button type="button" class="choice-btn">Contact me directly</button>
+        <button type="button" class="choice-btn">Book a call or consultation</button>
+        <button type="button" class="choice-btn">Browse my listings</button>
+        <button type="button" class="choice-btn">Learn about me / my story</button>
+        <button type="button" class="choice-btn">Fill out a buyer or seller form</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What sections do you definitely want on your site?</label>
+      <div class="choices" data-type="multi" data-name="q_site_sections">
+        <button type="button" class="choice-btn">About me / my story</button>
+        <button type="button" class="choice-btn">My listings</button>
+        <button type="button" class="choice-btn">Client testimonials</button>
+        <button type="button" class="choice-btn">Contact form</button>
+        <button type="button" class="choice-btn">How I work / my process</button>
+        <button type="button" class="choice-btn">Free buyer / seller guide</button>
+        <button type="button" class="choice-btn">Book a call</button>
+        <button type="button" class="choice-btn">Market insights or blog</button>
+        <button type="button" class="choice-btn">Vietnamese language option</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What do you already have that builds trust with new clients?</label>
+      <div class="choices" data-type="multi" data-name="q_trust_signals">
+        <button type="button" class="choice-btn">Client testimonials / reviews</button>
+        <button type="button" class="choice-btn">Sold property photos</button>
+        <button type="button" class="choice-btn">Years of experience</button>
+        <button type="button" class="choice-btn">Certifications or licenses</button>
+        <button type="button" class="choice-btn">Press mentions</button>
+        <button type="button" class="choice-btn">Strong social following</button>
+        <button type="button" class="choice-btn">Nothing yet — building from scratch</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What words do you want people to use when they describe your site?</label>
+      <div class="choices" data-type="multi" data-name="q_site_vibe">
+        <button type="button" class="choice-btn">Luxury</button>
+        <button type="button" class="choice-btn">Warm &amp; personal</button>
+        <button type="button" class="choice-btn">Clean &amp; modern</button>
+        <button type="button" class="choice-btn">Professional</button>
+        <button type="button" class="choice-btn">Bold &amp; confident</button>
+        <button type="button" class="choice-btn">Trustworthy</button>
+        <button type="button" class="choice-btn">Elegant</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Do you have professional photos of yourself ready to use?</label>
+      <div class="choices" data-type="single" data-name="q_headshots">
+        <button type="button" class="choice-btn">Yes — ready to go</button>
+        <button type="button" class="choice-btn">Yes but they need updating</button>
+        <button type="button" class="choice-btn">No — need to get some taken</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What's your biggest frustration with your current online presence?</label>
+      <textarea name="q_frustration" placeholder="Be honest — this helps me know exactly what to fix."></textarea>
+    </div>
+
+    <div class="nav-btns">
+      <button type="button" class="btn-primary" onclick="goTo(4)">Next</button>
+      <button type="button" class="btn-back" onclick="goTo(2)">Back</button>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Instagram & Content -->
+  <div class="section" id="section-4">
+    <div class="section-eyebrow">Section 4 of 6</div>
+    <h2 class="section-title">Instagram &amp; Content</h2>
+    <p class="section-desc">Your IG is a huge opportunity. Let's understand where you're starting and where you want to go.</p>
+
+    <div class="question">
+      <label class="question-label">How would you describe your current Instagram strategy?</label>
+      <div class="choices" data-type="single" data-name="q_ig_strategy">
+        <button type="button" class="choice-btn">I post listings only</button>
+        <button type="button" class="choice-btn">I mix listings with personal content</button>
+        <button type="button" class="choice-btn">I barely post — not consistent</button>
+        <button type="button" class="choice-btn">I have a strategy but it's not working</button>
+        <button type="button" class="choice-btn">Starting fresh — no real strategy yet</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What kind of content feels most natural for you to create?</label>
+      <div class="choices" data-type="multi" data-name="q_content_types">
+        <button type="button" class="choice-btn">Talking to camera (Reels)</button>
+        <button type="button" class="choice-btn">Behind-the-scenes of showings</button>
+        <button type="button" class="choice-btn">Neighborhood tours</button>
+        <button type="button" class="choice-btn">Client success stories</button>
+        <button type="button" class="choice-btn">Market tips &amp; advice</button>
+        <button type="button" class="choice-btn">Aesthetic listing photos</button>
+        <button type="button" class="choice-btn">Personal lifestyle content</button>
+        <button type="button" class="choice-btn">I need help figuring this out</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">How do you feel about being on camera?</label>
+      <div class="choices" data-type="single" data-name="q_camera_comfort">
+        <button type="button" class="choice-btn">Love it — comfortable and natural</button>
+        <button type="button" class="choice-btn">Fine with it once I get going</button>
+        <button type="button" class="choice-btn">A little uncomfortable, but willing</button>
+        <button type="button" class="choice-btn">Prefer not to — behind the scenes is better</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Do you currently work with a photographer or videographer?</label>
+      <div class="choices" data-type="single" data-name="q_photographer">
+        <button type="button" class="choice-btn">Yes — regularly</button>
+        <button type="button" class="choice-btn">Sometimes, for big listings only</button>
+        <button type="button" class="choice-btn">No — too expensive right now</button>
+        <button type="button" class="choice-btn">No — I film everything myself</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What does your dream Instagram look like in 6 months?</label>
+      <textarea name="q_ig_dream" placeholder="Followers, types of posts, how it feels when someone lands on your page…"></textarea>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Any agents or creators on Instagram you admire? <span class="opt">(optional)</span></label>
+      <input type="text" name="q_ig_inspo" placeholder="e.g. @someone — I love how they show…" />
+    </div>
+
+    <div class="nav-btns">
+      <button type="button" class="btn-primary" onclick="goTo(5)">Next</button>
+      <button type="button" class="btn-back" onclick="goTo(3)">Back</button>
+    </div>
+  </div>
+
+  <!-- SECTION 5: Email -->
+  <div class="section" id="section-5">
+    <div class="section-eyebrow">Section 5 of 6</div>
+    <h2 class="section-title">Email &amp; Client Communication</h2>
+    <p class="section-desc">Staying in front of clients between transactions is where most agents drop the ball. Let's fix that.</p>
+
+    <div class="question">
+      <label class="question-label">Do you currently send any emails to past or potential clients?</label>
+      <div class="choices" data-type="single" data-name="q_email_current">
+        <button type="button" class="choice-btn">No — nothing yet</button>
+        <button type="button" class="choice-btn">Occasionally, but not consistently</button>
+        <button type="button" class="choice-btn">Yes, but not on a real system</button>
+        <button type="button" class="choice-btn">Yes — I have an email system going</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What tone do you want your emails to have?</label>
+      <div class="choices" data-type="single" data-name="q_email_tone">
+        <button type="button" class="choice-btn">Warm and personal — like a friend texting</button>
+        <button type="button" class="choice-btn">Professional and polished</button>
+        <button type="button" class="choice-btn">Informative — market updates and tips</button>
+        <button type="button" class="choice-btn">A mix of all of the above</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What would you most want to email clients about?</label>
+      <div class="choices" data-type="multi" data-name="q_email_topics">
+        <button type="button" class="choice-btn">New listings</button>
+        <button type="button" class="choice-btn">Market updates</button>
+        <button type="button" class="choice-btn">Buying / selling tips</button>
+        <button type="button" class="choice-btn">Seasonal check-ins</button>
+        <button type="button" class="choice-btn">Just sold announcements</button>
+        <button type="button" class="choice-btn">Thank-you after closing</button>
+        <button type="button" class="choice-btn">Re-engaging past clients</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Do you have an email list?</label>
+      <div class="choices" data-type="single" data-name="q_email_list">
+        <button type="button" class="choice-btn">No — starting from zero</button>
+        <button type="button" class="choice-btn">Yes, but it's small</button>
+        <button type="button" class="choice-btn">Yes and I want to grow it</button>
+      </div>
+    </div>
+
+    <div class="nav-btns">
+      <button type="button" class="btn-primary" onclick="goTo(6)">Next</button>
+      <button type="button" class="btn-back" onclick="goTo(4)">Back</button>
+    </div>
+  </div>
+
+  <!-- SECTION 6: Timeline -->
+  <div class="section" id="section-6">
+    <div class="section-eyebrow">Section 6 of 6</div>
+    <h2 class="section-title">Timeline &amp; Next Steps</h2>
+    <p class="section-desc">Almost done — just a few logistics before we kick things off.</p>
+
+    <div class="question">
+      <label class="question-label">Where do most of your current clients come from?</label>
+      <div class="choices" data-type="multi" data-name="q_lead_sources">
+        <button type="button" class="choice-btn">Referrals from past clients</button>
+        <button type="button" class="choice-btn">Instagram</button>
+        <button type="button" class="choice-btn">Facebook</button>
+        <button type="button" class="choice-btn">Zillow / Realtor.com</button>
+        <button type="button" class="choice-btn">Open houses</button>
+        <button type="button" class="choice-btn">Vietnamese community / network</button>
+        <button type="button" class="choice-btn">Cold outreach</button>
+        <button type="button" class="choice-btn">Still building this out</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">When would you ideally like the website live?</label>
+      <div class="choices" data-type="single" data-name="q_timeline">
+        <button type="button" class="choice-btn">ASAP</button>
+        <button type="button" class="choice-btn">Within 2 weeks</button>
+        <button type="button" class="choice-btn">Within a month</button>
+        <button type="button" class="choice-btn">Within 3 months</button>
+        <button type="button" class="choice-btn">No rush — do it right</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">What's your budget range for the website build?</label>
+      <div class="choices" data-type="single" data-name="q_budget">
+        <button type="button" class="choice-btn">Under $300</button>
+        <button type="button" class="choice-btn">$300 – $500</button>
+        <button type="button" class="choice-btn">$500 – $800</button>
+        <button type="button" class="choice-btn">$800+</button>
+        <button type="button" class="choice-btn">Let's talk about it</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Are we working on this as…</label>
+      <div class="choices" data-type="single" data-name="q_arrangement">
+        <button type="button" class="choice-btn">A favor</button>
+        <button type="button" class="choice-btn">A discounted rate</button>
+        <button type="button" class="choice-btn">Full rate — let's talk numbers</button>
+        <button type="button" class="choice-btn">Revenue share / referral deal</button>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="question-label">Anything else you want me to know before I start building?</label>
+      <textarea name="q_anything_else" placeholder="Vision, concerns, things you definitely don't want, past experiences — anything goes."></textarea>
+    </div>
+
+    <div class="nav-btns">
+      <button type="button" class="btn-primary" id="submitBtn" onclick="submitForm()">Submit</button>
+      <button type="button" class="btn-back" onclick="goTo(5)">Back</button>
+    </div>
+    <p class="submit-error" id="submitError">Something went wrong — please try again or text Cal directly.</p>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="section" id="section-success">
+    <div class="success-check">✓</div>
+    <h2 class="success-title">You're all set,<br><em style="color:var(--gold);font-style:italic">My Ta.</em></h2>
+    <div class="intro-rule"></div>
+    <p class="success-sub">Got everything I need. I'll review your answers and reach out soon with next steps. Excited to build something beautiful for you.</p>
+  </div>
+</form>
+
+<script>
+  const STORAGE_KEY = 'myta-discovery-form';
+  const TOTAL = 6;
+  let cur = 0;
+
+  function goTo(n) {
+    const prev = cur === 0 ? 'section-0' : `section-${cur}`;
+    document.getElementById(prev)?.classList.remove('active');
+    cur = n;
+    const next = (n === 'success') ? 'section-success' : `section-${n}`;
+    document.getElementById(next).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    updateBar();
+  }
+
+  function updateBar() {
+    const pct = cur === 0 ? 0 : Math.round((cur / TOTAL) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    const lbl = document.getElementById('progressLabel');
+    if (cur >= 1 && cur <= TOTAL) {
+      lbl.style.display = 'block';
+      lbl.textContent = `${cur} of ${TOTAL}`;
+    } else {
+      lbl.style.display = 'none';
+    }
+  }
+
+  // Choices
+  document.querySelectorAll('.choices').forEach(group => {
+    group.querySelectorAll('.choice-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (group.dataset.type === 'single') {
+          group.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+        }
+        btn.classList.toggle('selected');
+        save();
+      });
+    });
+  });
+
+  // Autosave
+  function getData() {
+    const d = { _section: cur };
+    document.querySelectorAll('input[type="text"][name], textarea[name]').forEach(el => {
+      d[el.name] = el.value;
+    });
+    document.querySelectorAll('.choices[data-name]').forEach(g => {
+      d[g.dataset.name] = [...g.querySelectorAll('.choice-btn.selected')].map(b => b.textContent.trim());
+    });
+    return d;
+  }
+
+  let saveT;
+  function save() {
+    clearTimeout(saveT);
+    saveT = setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(getData()));
+      const t = document.getElementById('toast');
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }, 400);
+  }
+
+  document.querySelectorAll('input[type="text"], textarea').forEach(el => el.addEventListener('input', save));
+
+  // Restore
+  (function restore() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      Object.entries(d).forEach(([k, v]) => {
+        if (k === '_section') return;
+        const el = document.querySelector(`input[name="${k}"],textarea[name="${k}"]`);
+        if (el) { el.value = v; return; }
+        const g = document.querySelector(`.choices[data-name="${k}"]`);
+        if (g && Array.isArray(v)) v.forEach(val =>
+          g.querySelectorAll('.choice-btn').forEach(b => { if (b.textContent.trim() === val) b.classList.add('selected'); })
+        );
+      });
+      if (d._section > 0 && d._section <= TOTAL) {
+        document.getElementById('section-0').classList.remove('active');
+        cur = d._section;
+        document.getElementById(`section-${cur}`).classList.add('active');
+        updateBar();
+      }
+    } catch(e) {}
+  })();
+
+  // Submit
+  async function submitForm() {
+    const btn = document.getElementById('submitBtn');
+    const err = document.getElementById('submitError');
+    btn.disabled = true; btn.textContent = 'Sending…'; err.style.display = 'none';
+
+    const d = getData();
+    const fd = new FormData();
+    Object.entries(d).forEach(([k, v]) => {
+      if (k === '_section') return;
+      fd.append(k, Array.isArray(v) ? v.join(', ') : v);
+    });
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    try {
+      const res = await fetch('https://formspree.io/f/xvzvnkay', {
+        method: 'POST', body: fd,
+        headers: { 'Accept': 'application/json' },
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        localStorage.removeItem(STORAGE_KEY);
+        document.getElementById(`section-${cur}`).classList.remove('active');
+        document.getElementById('section-success').classList.add('active');
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('progressLabel').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else { throw new Error(); }
+    } catch(e) {
+      clearTimeout(timer);
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Submit';
+    }
+  }
+</script>
+</body>
+</html>

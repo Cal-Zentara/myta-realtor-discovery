@@ -793,22 +793,24 @@
     btn.disabled = true; btn.textContent = 'Sending…'; err.style.display = 'none';
 
     const d = getData();
-    const fd = new FormData();
+    const payload = { _subject: 'My Ta — Discovery Form Submission', client_name: 'My Ta Realtor' };
     Object.entries(d).forEach(([k, v]) => {
       if (k === '_section') return;
-      fd.append(k, Array.isArray(v) ? v.join(', ') : v);
+      payload[k] = Array.isArray(v) ? v.join(', ') : v;
     });
 
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 12000);
+    const timer = setTimeout(() => ctrl.abort(), 15000);
     try {
       const res = await fetch('https://formspree.io/f/xvzvnkay', {
-        method: 'POST', body: fd,
-        headers: { 'Accept': 'application/json' },
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
         signal: ctrl.signal
       });
       clearTimeout(timer);
-      if (res.ok) {
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.ok !== false) {
         localStorage.removeItem(STORAGE_KEY);
         document.getElementById(`section-${cur}`).classList.remove('active');
         document.getElementById('section-success').classList.add('active');
@@ -817,9 +819,15 @@
         document.getElementById('progressFill').style.width = '100%';
         document.getElementById('progressLabel').style.display = 'none';
         window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else { throw new Error(); }
+      } else {
+        const msg = (body.errors && body.errors[0] && body.errors[0].message) || body.error || `HTTP ${res.status}`;
+        console.error('Formspree error:', body);
+        err.textContent = `Couldn't send: ${msg}. Please text Cal at 408-707-3733.`;
+        throw new Error(msg);
+      }
     } catch(e) {
       clearTimeout(timer);
+      console.error('Submit failed:', e);
       err.style.display = 'block';
       btn.disabled = false; btn.textContent = 'Submit';
     }
